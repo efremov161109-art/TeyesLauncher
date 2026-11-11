@@ -70,18 +70,10 @@ class MainActivity : AppCompatActivity(), LocationListener {
             updateVolumeDisplay()
         }
 
-        findViewById<ImageButton>(R.id.sideBtnVoice).setOnClickListener {
-            voiceAssistant.activateAssistant()
-        }
-        findViewById<ImageButton>(R.id.sideBtnSettings).setOnClickListener {
-            startActivity(Intent(Settings.ACTION_SETTINGS))
-        }
-        findViewById<ImageButton>(R.id.sideBtnApps).setOnClickListener {
-            showAllAppsDialog(null)
-        }
-        findViewById<ImageButton>(R.id.sideBtnNavi).setOnClickListener {
-            launchAppFull("ru.yandex.yandexnavi")
-        }
+        findViewById<ImageButton>(R.id.sideBtnVoice).setOnClickListener { voiceAssistant.activateAssistant() }
+        findViewById<ImageButton>(R.id.sideBtnSettings).setOnClickListener { startActivity(Intent(Settings.ACTION_SETTINGS)) }
+        findViewById<ImageButton>(R.id.sideBtnApps).setOnClickListener { showAllAppsDialog(null) }
+        findViewById<ImageButton>(R.id.sideBtnNavi).setOnClickListener { launchAppFull("ru.yandex.yandexnavi") }
 
         btnSwitchSource.setOnClickListener {
             currentSource = when (currentSource) {
@@ -96,18 +88,13 @@ class MainActivity : AppCompatActivity(), LocationListener {
         findViewById<Button>(R.id.btnMusicPlay).setOnClickListener { controlMedia(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
         findViewById<Button>(R.id.btnMusicNext).setOnClickListener { controlMedia(KeyEvent.KEYCODE_MEDIA_NEXT) }
 
-        findViewById<Button>(R.id.btnOpenNaviWindow).setOnClickListener {
-            launchSplitWindow("ru.yandex.yandexnavi")
-        }
-        findViewById<Button>(R.id.btnOpenNaviFull).setOnClickListener {
-            launchAppFull("ru.yandex.yandexnavi")
-        }
+        findViewById<Button>(R.id.btnOpenNaviWindow).setOnClickListener { launchSplitWindow("ru.yandex.yandexnavi") }
+        findViewById<Button>(R.id.btnOpenNaviFull).setOnClickListener { launchAppFull("ru.yandex.yandexnavi") }
         findViewById<Button>(R.id.btnNaviClose).setOnClickListener {
-            val home = Intent(Intent.ACTION_MAIN).apply {
+            startActivity(Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(home)
+            })
         }
 
         setupAppSlot(findViewById(R.id.appSlot1), "slot1", "ru.yandex.music", "Я.Музыка")
@@ -115,21 +102,12 @@ class MainActivity : AppCompatActivity(), LocationListener {
         setupAppSlot(findViewById(R.id.appSlot3), "slot3", "com.android.documentsui", "Файлы")
         setupAppSlot(findViewById(R.id.appSlot4), "slot4", "com.google.android.youtube", "YouTube")
 
-        findViewById<Button>(R.id.appSlotAdd).setOnClickListener {
-            showAllAppsDialog(null)
-        }
+        findViewById<Button>(R.id.appSlotAdd).setOnClickListener { showAllAppsDialog(null) }
 
         findViewById<Button>(R.id.btnRadioPrev).setOnClickListener { sendMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
         findViewById<Button>(R.id.btnRadioNext).setOnClickListener { sendMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT) }
-
-        findViewById<Button>(R.id.btnRadioPrev).setOnLongClickListener {
-            openRadioApp()
-            true
-        }
-        findViewById<Button>(R.id.btnRadioNext).setOnLongClickListener {
-            openRadioApp()
-            true
-        }
+        findViewById<Button>(R.id.btnRadioPrev).setOnLongClickListener { openRadioApp(); true }
+        findViewById<Button>(R.id.btnRadioNext).setOnLongClickListener { openRadioApp(); true }
 
         updateVolumeDisplay()
         initPermissionsAndGps()
@@ -166,15 +144,9 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private fun controlMedia(keyCode: Int) {
         when (currentSource) {
             MediaSource.YANDEX_MUSIC -> sendMediaKey(keyCode)
-            MediaSource.RADIO -> {
-                if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) openRadioApp()
-                else sendMediaKey(keyCode)
-            }
+            MediaSource.RADIO -> if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) openRadioApp() else sendMediaKey(keyCode)
             MediaSource.LOCAL_DEVICE -> {
-                if (localTracks.isEmpty()) {
-                    loadLocalAudio()
-                    return
-                }
+                if (localTracks.isEmpty()) { loadLocalAudio(); return }
                 when (keyCode) {
                     KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                         if (mediaPlayer == null) playLocalTrack(currentTrackIndex)
@@ -207,13 +179,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private fun loadLocalAudio() {
         localTracks.clear()
         val projection = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE)
-        contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            "${MediaStore.Audio.Media.IS_MUSIC} != 0",
-            null,
-            null
-        )?.use { cursor ->
+        contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, "${MediaStore.Audio.Media.IS_MUSIC} != 0", null, null)?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             while (cursor.moveToNext()) {
@@ -239,3 +205,60 @@ class MainActivity : AppCompatActivity(), LocationListener {
         }
     }
 
+    private fun launchAppFull(packageName: String) {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        if (intent != null) startActivity(intent)
+        else Toast.makeText(this, "Приложение не найдено", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openRadioApp() {
+        val radios = listOf("com.xyauto.fmradio", "com.android.fmradio", "com.tw.radio", "com.ts.radio")
+        for (pkg in radios) {
+val intent = packageManager.getLaunchIntentForPackage(pkg)
+if (intent != null) { startActivity(intent); return }
+}
+Toast.makeText(this, "Выберите радио через меню приложений", Toast.LENGTH_SHORT).show()
+}
+private fun setupAppSlot(btn: Button, key: String, defaultPkg: String, defaultName: String) {
+val prefs = getSharedPreferences("teyes_slots", Context.MODE_PRIVATE)
+btn.text = prefs.getString("${key}_name", defaultName) ?: defaultName
+btn.setOnClickListener { launchAppFull(prefs.getString("${key}_pkg", defaultPkg) ?: defaultPkg) }
+btn.setOnLongClickListener {
+showAllAppsDialog { pkg, name ->
+prefs.edit().putString("${key}_pkg", pkg).putString("${key}_name", name).apply()
+btn.text = name
+}
+true
+}
+}
+private fun showAllAppsDialog(onSelect: ((String, String) -> Unit)?) {
+val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+val apps = packageManager.queryIntentActivities(mainIntent, 0).sortedBy { it.loadLabel(packageManager).toString() }
+val names = apps.map { it.loadLabel(packageManager).toString() }.toTypedArray()
+AlertDialog.Builder(this)
+.setTitle(if (onSelect != null) "Назначить приложение" else "Все приложения")
+.setItems(names) { _, which ->
+val pkg = apps[which].activityInfo.packageName
+if (onSelect != null) onSelect(pkg, names[which]) else launchAppFull(pkg)
+}.show()
+}
+private fun updateVolumeDisplay() {
+val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+topVolumeText.text = "🔊 ${am.getStreamVolume(AudioManager.STREAM_MUSIC)}"
+}
+private fun initPermissionsAndGps() {
+ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO), 101)
+val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 1f, this)
+}
+}
+override fun onLocationChanged(location: Location) {
+tvSpeedValue.text = (location.speed * 3.6).toInt().toString()
+}
+override fun onDestroy() {
+super.onDestroy()
+mediaPlayer?.release()
+voiceAssistant.destroy()
+}
+}
